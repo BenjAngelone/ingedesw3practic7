@@ -1,51 +1,31 @@
-name: Build and Publish
+name: Docker Image CI
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 7.0.x
-
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Build
-      run: dotnet build --configuration Release
-
-    - name: Publish
-      run: dotnet publish --configuration Release --output ./publish
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: app
-        path: ./publish
-  
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Download Artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: app
-    - name: Output contents
-      run: ls
-    - name: Deploy to Server
+      uses: actions/checkout@v2
+    
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag ${{ secrets.DOCKERHUB_USERNAME }}/simple-web-api-gh:latest
+    
+    - name: Log in to Docker Hub
+      run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
+    
+    - name: Push Docker image to Docker Hub
       run: |
-        echo "Deploy"
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/simple-web-api-gh:latest
+      
+    - name: Clean up
+      run: docker logout
+      if: always() # Se ejecutará incluso si un paso anterior falla
+
+ 
+
    
